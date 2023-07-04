@@ -1,0 +1,160 @@
+---
+title: "EU CAYAS NET WP5: EDI Survey recruitment progress"
+output: pdf_document
+date: "Last update: `r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+library(here)
+library(psych)
+library(english)
+library(stringr)
+library(tableone)
+library(kableExtra)
+library(patchwork)
+library(scales)
+library(ggridges)
+library(plotly)
+library(patchwork)
+library(haven)
+```
+
+```{r data, echo=FALSE, message=FALSE, warning=FALSE}
+# Read in the clean csv file
+raw_data <- read_csv("data/results-survey632997.csv")
+
+raw_data$startdate<-as.Date(raw_data$startdate, '%Y-%m-%d')
+
+data <- raw_data %>%
+  select_all(tolower) %>%
+  rename_with(~gsub("0", "_", .x, fixed = TRUE)) %>%
+  rename_with(~gsub("[", "_", .x, fixed = TRUE)) %>%
+  rename_with(~gsub("]", "", .x, fixed = TRUE)) %>%
+  filter(consent_1== "Y")
+
+data$startdate<-as.Date(data$startdate, '%Y-%m-%d')## Keep just day, month, year
+
+data_complete <- data %>%
+  filter(lastpage %in% c(8:10))
+```
+
+* This update covers the period between `r min(raw_data$startdate, na.rm = TRUE)` and `r max(raw_data$startdate, na.rm=TRUE)`.
+
+* Visits to the front page of the survey: `r nrow(raw_data)`.
+
+* Number of participants who consented to participate: `r nrow(data)`.
+
+* Number of participants who completed* the survey: **`r raw_data %>% filter(lastpage %in% c(8:10)) %>% nrow()`** or `r round((raw_data %>% filter(lastpage %in% c(8:10)) %>% nrow())/(data %>% nrow)*100,1)`% of those who consented.
+
+*NB: Completion is determined by having reached the final page of the survey. Front page information stated that data from participant with partial responses will not be used.
+
+## Languages
+
+Participants who *consented* have started the survey in the following languages:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4}
+data %>%
+  dplyr::select(startlanguage) %>%
+  group_by(startlanguage) %>%
+  drop_na() %>%
+  count() %>%
+  ungroup() %>%
+  mutate(sum = sum(n),
+         prop = n/sum*100) %>%
+  mutate(entry = as.factor(startlanguage),
+         entry = fct_reorder(startlanguage, prop)) %>%
+  ggplot(aes(x = prop, y = startlanguage, fill = entry)) + 
+  geom_col() + 
+  geom_text(aes(label = paste0("N = ", n), x = prop+5)) +
+  labs(title = " ", 
+       x = "Proportion (%)",
+       y = " ") + 
+  xlim(0, 100) +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = 'bold'),
+        panel.grid.major.x = element_line())
+```
+
+## Demographic information of participants who *completed* the survey
+
+To date, participants have been recruited from the following countries. NB: The codes are ISO-3 country codes; [source](https://www.iban.com/country-codes). 
+
+OTH = Other; individuals may either wish not to respond, or have a nationality of an unlisted country
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+data_complete %>%
+  dplyr::select(dem_country) %>%
+  drop_na() %>%
+  group_by(dem_country) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(sum = sum(n),
+         prop = n/sum,
+         prop = round(prop, 2)) %>%
+  dplyr::select(-sum) %>%
+  kable(col.names = c("Country code", "N", "Proportion")) %>%
+  kable_styling("hover", full_width = FALSE, latex_options = "HOLD_position")
+```
+## Age
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=3}
+data_complete %>%
+  ggplot(aes(x = dem_age)) +
+  geom_histogram(bins = 30, color = "black", fill="lightblue") +
+  #geom_histogram(aes(y=..density..), bins = 30, color = "black", fill="lightblue") +
+  #geom_density(fill = "#FF6666", alpha = 0.2) +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = 'bold')) +
+  scale_x_continuous(breaks = seq(0, 80, by=2)) +
+  scale_y_continuous(breaks = seq(0, 5, by=1)) +
+  labs(x = "Current Age",
+       y = "Count")
+
+```
+
+
+## Age at diagnosis
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=5, fig.height=3}
+# data %>%
+#   ggplot(aes(x = age_dx)) +
+#   geom_histogram(bins = 30, color = "black", fill="lightblue") +
+#   theme_classic(base_size = 12) +
+#   theme(legend.position = "none",
+#         strip.text = element_text(face = 'bold')) +
+#   scale_x_continuous(breaks = seq(0, 80, by=2)) +
+#   labs(x = "Age at diagnosis",
+#        y = "Count")
+```
+## Gender
+
+* 1 = Female
+* 2 = Male
+* 3 = Non-binary
+* 4 = Other
+* 5 = Prefer not to answer
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+data_complete %>%
+  dplyr::select(dem_gender) %>%
+  drop_na() %>%
+  group_by(dem_gender) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(sum = sum(n),
+         prop = n/sum,
+         prop = round(prop, 2)) %>%
+  dplyr::select(-sum) %>%
+  kable(col.names = c("Sex", "N", "Proportion")) %>%
+  kable_styling("hover", full_width = FALSE, latex_options = "HOLD_position")
+```
+
+### Next steps
+
+* Determine if other info is needed for the updates
+* Prepare a code for extracting qualitative answers
+
+This document was prepared by UK - [reach me with any questions/comments](mailto:dr.urska.kosir@gmail.com)!
