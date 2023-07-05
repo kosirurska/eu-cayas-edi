@@ -38,7 +38,8 @@ data <- raw_data %>%
 data$startdate<-as.Date(data$startdate, '%Y-%m-%d')## Keep just day, month, year
 
 data_complete <- data %>%
-  filter(lastpage %in% c(8:10))
+  filter(lastpage %in% c(8:10)) %>%
+  mutate(age_dx = as.numeric(age_dx))
 ```
 
 * This update covers the period between `r min(raw_data$startdate, na.rm = TRUE)` and `r max(raw_data$startdate, na.rm=TRUE)`.
@@ -51,12 +52,15 @@ data_complete <- data %>%
 
 *NB: Completion is determined by having reached the final page of the survey. Front page information stated that data from participant with partial responses will not be used.
 
+
+## Demographic information of participants who *completed* the survey
+
 ## Languages
 
-Participants who *consented* have started the survey in the following languages:
+Participants started the survey in the following languages:
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4}
-data %>%
+data_complete %>%
   dplyr::select(startlanguage) %>%
   group_by(startlanguage) %>%
   drop_na() %>%
@@ -79,7 +83,7 @@ data %>%
         panel.grid.major.x = element_line())
 ```
 
-## Demographic information of participants who *completed* the survey
+## Countries
 
 To date, participants have been recruited from the following countries. NB: The codes are ISO-3 country codes; [source](https://www.iban.com/country-codes). 
 
@@ -99,7 +103,9 @@ data_complete %>%
   kable(col.names = c("Country code", "N", "Proportion")) %>%
   kable_styling("hover", full_width = FALSE, latex_options = "HOLD_position")
 ```
-## Age
+
+## Current age
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=3}
 data_complete %>%
   ggplot(aes(x = dem_age)) +
@@ -119,27 +125,27 @@ data_complete %>%
 
 ## Age at diagnosis
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=5, fig.height=3}
-# data %>%
-#   ggplot(aes(x = age_dx)) +
-#   geom_histogram(bins = 30, color = "black", fill="lightblue") +
-#   theme_classic(base_size = 12) +
-#   theme(legend.position = "none",
-#         strip.text = element_text(face = 'bold')) +
-#   scale_x_continuous(breaks = seq(0, 80, by=2)) +
-#   labs(x = "Age at diagnosis",
-#        y = "Count")
+data_complete %>%
+  ggplot(aes(x = age_dx)) +
+  geom_histogram(bins = 30, color = "black", fill = "lightblue") +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = 'bold')) +
+  scale_x_continuous(breaks = seq(0, 80, by=2)) +
+  scale_y_continuous(breaks = seq(0, 5, by=1)) +
+  labs(x = "Current Age",
+       y = "Count")
 ```
+
 ## Gender
-
-* 1 = Female
-* 2 = Male
-* 3 = Non-binary
-* 4 = Other
-* 5 = Prefer not to answer
-
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 data_complete %>%
   dplyr::select(dem_gender) %>%
+  mutate(dem_gender = case_when(dem_gender==1 ~ "Female",
+                                dem_gender==2 ~ "Male",
+                                dem_gender==3 ~ "Non-binary",
+                                dem_gender==4 ~ "Other",
+                                dem_gender==5 ~ "Prefer not to answer")) %>%
   drop_na() %>%
   group_by(dem_gender) %>%
   count() %>%
@@ -148,13 +154,53 @@ data_complete %>%
          prop = n/sum,
          prop = round(prop, 2)) %>%
   dplyr::select(-sum) %>%
-  kable(col.names = c("Sex", "N", "Proportion")) %>%
-  kable_styling("hover", full_width = FALSE, latex_options = "HOLD_position")
+  kable(col.names = c(" ", "N", "Proportion")) %>%
+  kable_styling("hover", full_width = FALSE, position = "left",
+                latex_options = "HOLD_position")
 ```
 
-### Next steps
+## Treatment status
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+data_complete %>%
+  dplyr::select(tx_now) %>%
+  mutate(tx_now = case_when(tx_now==1 ~ "In treatment",
+                            tx_now==2 ~ "Not in treatment")) %>%
+  drop_na() %>%
+  group_by(tx_now) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(sum = sum(n),
+         prop = n/sum,
+         prop = round(prop, 2)) %>%
+  dplyr::select(-sum) %>%
+  kable(col.names = c(" ", "N", "Proportion")) %>%
+  kable_styling("hover", full_width = FALSE, position = "left",
+                latex_options = "HOLD_position")
+```
+
+\newpage
+
+# Next steps
 
 * Determine if other info is needed for the updates
-* Prepare a code for extracting qualitative answers
+* Remove those not fitting the criteria (age)
+* Prepare a code for extracting qualitative answers (create a data dictionary)
+
+### Qualitative answers
+
+```{r, results=FALSE}
+data_qual <- data_complete %>%
+  dplyr::select(id, # To make sure responses aren't double-counted
+                startlanguage, # Starting language to know what to translate from
+                country_tx_a, tx_finance_qual, 
+                s1_2, s1_3, # Secion 1: EDI Statement
+                s2_3, s2_2b, # Section 2.1: Bias free environment/care
+                s2_5_a, s2_5_b, # Section 2.2: Personal experience 
+                s3_2, s3_3) # Section 3: EDI Champions
+
+# write_csv(data_qual, "data/qual_responses.csv")
+```
+
 
 This document was prepared by UK - [reach me with any questions/comments](mailto:dr.urska.kosir@gmail.com)!
