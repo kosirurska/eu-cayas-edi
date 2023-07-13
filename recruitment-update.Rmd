@@ -24,7 +24,7 @@ library(haven)
 
 ```{r data, echo=FALSE, message=FALSE, warning=FALSE}
 # Read in the clean csv file
-raw_data <- read_csv("data/results-survey632997.csv")
+raw_data <- read_csv("data/results-13072023.csv")
 
 raw_data$startdate<-as.Date(raw_data$startdate, '%Y-%m-%d')
 
@@ -50,7 +50,7 @@ data_complete <- data %>%
 
 * Number of participants who completed* the survey: **`r raw_data %>% filter(lastpage %in% c(8:10)) %>% nrow()`** or `r round((raw_data %>% filter(lastpage %in% c(8:10)) %>% nrow())/(data %>% nrow)*100,1)`% of those who consented.
 
-*NB: Completion is determined by having reached the final page of the survey. Front page information stated that data from participant with partial responses will not be used.
+*NB*: Completion is determined by having reached the final page of the survey. Front page information stated that data from participant with partial responses will not be used.
 
 
 ## Demographic information of participants who *completed* the survey
@@ -106,10 +106,12 @@ data_complete %>%
 
 ## Current age
 
+*NB*: Because the purpose of this document is to inform the recruitment efforts and targets, all cases are included. Further analysis will only be based on the inclusion/exclusion criteria regarding the demographic characteristics such as age range (<39y at diagnosis).
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=3}
 data_complete %>%
   ggplot(aes(x = dem_age)) +
-  geom_histogram(bins = 30, color = "black", fill="lightblue") +
+  geom_histogram(bins = 30, color = "black", fill = "lightblue") +
   #geom_histogram(aes(y=..density..), bins = 30, color = "black", fill="lightblue") +
   #geom_density(fill = "#FF6666", alpha = 0.2) +
   theme_classic(base_size = 12) +
@@ -121,7 +123,6 @@ data_complete %>%
        y = "Count")
 
 ```
-
 
 ## Age at diagnosis
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=5, fig.height=3}
@@ -137,59 +138,138 @@ data_complete %>%
        y = "Count")
 ```
 
-## Gender
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-data_complete %>%
-  dplyr::select(dem_gender) %>%
-  mutate(dem_gender = case_when(dem_gender==1 ~ "Female",
-                                dem_gender==2 ~ "Male",
-                                dem_gender==3 ~ "Non-binary",
-                                dem_gender==4 ~ "Other",
-                                dem_gender==5 ~ "Prefer not to answer")) %>%
-  drop_na() %>%
-  group_by(dem_gender) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(sum = sum(n),
-         prop = n/sum,
-         prop = round(prop, 2)) %>%
-  dplyr::select(-sum) %>%
-  kable(col.names = c(" ", "N", "Proportion")) %>%
-  kable_styling("hover", full_width = FALSE, position = "left",
-                latex_options = "HOLD_position")
+## Demographics
+
+```{r echo=FALSE, warning=FALSE}
+table_1_dems <- data_complete %>%
+  dplyr::select(dem_age, dem_gender, dem_religion, dem_edu, dem_relationship, dem_ses, dem_employment, dem_child, dem_dependent, cancer_dx, tx_now, tx_since, chronic_tx) %>%
+  mutate(dem_gender = factor(dem_gender,
+                          levels = c(1, 2, 3, 4, 999),
+                          labels = c("Female", "Male", "Non-binary", "Other", "Prefer not to answer")),
+         dem_religion = factor(dem_religion, 
+                               levels = c(0:8, 999),
+                               labels = c("None", "Roman Chatholic", "Orthodox", "Protestant", "Jewish", "Hindu", "Muslim", "Buddhist", "Other", "Prefer not to answer")),
+         dem_edu = factor(dem_edu,
+                          levels = c(1:7),
+                          labels = c("Elementary school", "High School", "Higher degree, below university", "Bachelor's", "Master's", "Doctorate/PhD", "Prefer not to answer")),
+         dem_relationship = factor(dem_relationship,
+                          levels = c(1:4),
+                          labels = c("Single", "Married/Common-Law", "Separated/Divorced/Widowed", "Prefer not to answer")),
+         dem_ses = factor(dem_ses,
+                          levels = c(1:3),
+                          labels = c("Low-income", "Middle-income", "High-income")),
+         dem_child = factor(dem_child, 
+                               levels = c(1, 2, 999),
+                               labels = c("Yes", "No", "Prefer not to answer")),
+         dem_dependent = factor(dem_dependent, 
+                               levels = c(1, 2, 999),
+                               labels = c("Yes", "No", "Prefer not to answer")),
+         cancer_dx = factor(cancer_dx,
+                          levels = c("other", "bladd", "brain", "breas", "cerv", "colre", "leuk", "lung", "mela", "pancr", "prost", "sarco", "testi", "thyro"),
+                          labels = c("Other", "Bladder, kidney, liver", "Brain or CNS", "Breast", "Cervical, ovarian, endometrial", "Colon, rectal, gastric", "Hematologic", "Lung", "Melanoma", "Pancreatic", "Prostate", "Sarcoma (all types)", "Testicular", "Thyroid")),
+         tx_now = factor(tx_now, 
+                               levels = c(1:2),
+                               labels = c("Yes", "No")),
+         tx_since = factor(tx_since,
+                          levels = c(1:3),
+                          labels = c("Yes", "No", "Prefer not to answer")),
+         chronic_tx = factor(chronic_tx, 
+                               levels = c(1:3),
+                               labels = c("Yes", "No", "Prefer not to answer")))
+
+
+table1::label(table_1_dems$dem_gender) <- "Gender"
+table1::label(table_1_dems$dem_edu) <- "Education"
+table1::label(table_1_dems$dem_religion) <- "Religious orientation"
+table1::label(table_1_dems$dem_relationship) <- "Relationship status"
+table1::label(table_1_dems$dem_ses) <- "Perceived relative SES"
+table1::label(table_1_dems$dem_child) <- "Have children?"
+table1::label(table_1_dems$dem_dependent) <- "Care for dependent parents/person?"
+table1::label(table_1_dems$cancer_dx) <- "Cancer type"
+table1::label(table_1_dems$tx_now) <- "In treatment"
+table1::label(table_1_dems$tx_since) <- "Time since treatment"
+table1::label(table_1_dems$chronic_tx) <- "Multimorbidity"
+
+table1::table1(~ dem_gender + dem_religion + dem_edu + dem_relationship + dem_ses,
+       data = table_1_dems)
+
+table1::table1(~ cancer_dx + tx_now + tx_since + chronic_tx,
+       data = table_1_dems)
 ```
 
-## Treatment status
+## Pattern of times and missing data
+
+What page are people dropping off at?
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=3}
+raw_data %>%
+  ggplot(aes(x = lastpage)) +
+  geom_histogram(bins = 10, color = "black", fill = "lightblue") +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = 'bold')) +
+  scale_x_continuous(breaks = seq(-1, 10, by=1)) +
+  geom_text(aes(y = -1), label = "Last page", x = 8, size = 3) +
+  geom_text(aes(y = -1), label = "Consent", x = 1, size = 3) +
+  geom_text(aes(y = -1), label = "Med info", x = 3, size = 3) +
+  geom_text(aes(y = -1), label = "Sect. 1", x = 4, size = 3) +
+  labs(x = "Page where they dropped off",
+       y = "How many people (count)")
+```
+
+
+On average participants engaged with the survey for `r round((mean(raw_data$interviewtime))/60,1)` minutes (range `r round((min(raw_data$interviewtime))/60,1)` - `r round((max(raw_data$interviewtime))/60,1)`).
+
+**Those who completed** the survey engaged for an average of **`r round((mean(data_complete$interviewtime))/60,1)`** minutes (range `r round((min(data_complete$interviewtime))/60,1)` - `r round((max(data_complete$interviewtime))/60,1)`).
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 data_complete %>%
-  dplyr::select(tx_now) %>%
-  mutate(tx_now = case_when(tx_now==1 ~ "In treatment",
-                            tx_now==2 ~ "Not in treatment")) %>%
-  drop_na() %>%
-  group_by(tx_now) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(sum = sum(n),
-         prop = n/sum,
-         prop = round(prop, 2)) %>%
-  dplyr::select(-sum) %>%
-  kable(col.names = c(" ", "N", "Proportion")) %>%
-  kable_styling("hover", full_width = FALSE, position = "left",
-                latex_options = "HOLD_position")
+  mutate(interviewtime_min = interviewtime/60) %>%
+  filter(interviewtime_min < 60) %>%
+  ggplot(aes(x = interviewtime_min)) +
+  geom_histogram(bins = 30, color = "black", fill = "lightblue") +
+  # geom_histogram(aes(y =..density..), bins = 30, color = "black", fill="lightblue") +
+  # geom_density(fill = "#FF6666", alpha = 0.2) +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = 'bold')) +
+  labs(title = "Distribution of time spent filling out the survey",
+       x = "Time (min)",
+       y = "How many people (count)")
 ```
-
 \newpage
 
 # Next steps
 
-* Determine if other info is needed for the updates
-* Remove those not fitting the criteria (age)
-* Prepare a code for extracting qualitative answers (create a data dictionary)
+* export the qualitative data & translate non-English answers
 
 ### Qualitative answers
 
 ```{r, results=FALSE}
+data_qual_1 <- data_complete %>%
+  dplyr::select(id, # To make sure responses aren't double-counted
+                startlanguage, # Starting language to know what to translate from
+                country_tx_a, tx_finance_qual) 
+
+data_qual_2 <- data_complete %>%
+  dplyr::select(id, startlanguage,
+                s1_2, s1_3) # Section 1: EDI Statement
+
+data_qual_3 <- data_complete %>%
+  dplyr::select(id, startlanguage,
+                s2_3, s2_2b, # Section 2.1: Bias free environment/care
+                s2_5_a, s2_5_b) # Section 2.2: Personal experience 
+
+data_qual_4 <- data_complete %>%
+  dplyr::select(id, startlanguage,
+                s3_2, s3_3) # Section 3: EDI Champions
+
+# write_csv(data_qual_1, "data/qual_responses_dems.csv")
+# write_csv(data_qual_2, "data/qual_responses_sec1.csv")
+# write_csv(data_qual_3, "data/qual_responses_sec2.csv")
+# write_csv(data_qual_4, "data/qual_responses_sec3.csv")
+
+### ALL:
 data_qual <- data_complete %>%
   dplyr::select(id, # To make sure responses aren't double-counted
                 startlanguage, # Starting language to know what to translate from
